@@ -1,0 +1,183 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Chatbot</title>
+
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="js-container"></div>
+
+    <script
+      crossorigin
+      src="https://unpkg.com/react@18/umd/react.development.js"
+    ></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"
+    ></script>
+
+    <script src="https://unpkg.com/supersimpledev@8.6.4/chatbot.js"></script>
+
+    <script src="https://unpkg.com/dayjs@1.11.13/dayjs.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script type="text/babel">
+      const container = document.querySelector(".js-container");
+      const root = ReactDOM.createRoot(container);
+      const todayDate = dayjs().format("MMMM D");
+
+      function ChatInput({
+        chatMessages,
+        setChatMessages,
+        isLoading,
+        setIsLoading,
+      }) {
+        const [inputText, setInputText] = React.useState("");
+        // inputText da usha yozilgan narsa turibdi
+
+        function saveInputText(event) {
+          setInputText(event.target.value);
+
+          // yozilgan narsani saqlab turadi setInputText ga keyin u inputText ga otadi
+        }
+
+        async function sendMessage() {
+          if (isLoading || inputText.trim() === "") {
+            return;
+          }
+
+          const newChatMessages = [
+            ...chatMessages,
+            // qachonki send knopka bosilsa previousMessages ga saqlandi keyin setChatMessages ga saqlanadi
+            {
+              message: inputText,
+              sender: "user",
+              id: crypto.randomUUID(),
+            },
+          ];
+
+          setChatMessages(newChatMessages);
+          setIsLoading(true);
+
+          try {
+            const response = await Chatbot.getResponseAsync(inputText);
+
+            setChatMessages(() => [
+              ...newChatMessages,
+              // qachonki send knopka bosilsa previousMessages ga saqlandi keyin setChatMessages ga saqlanadi
+              {
+                message: response,
+                sender: "bot",
+                id: crypto.randomUUID(),
+              },
+            ]);
+
+            setInputText("");
+          } finally {
+            setIsLoading(false);
+          }
+        }
+
+        function handleKeyDown(event) {
+          if (event.key === "Enter") {
+            sendMessage();
+          } else if (event.key === "Escape") {
+            setInputText("");
+          }
+        }
+
+        return (
+          <div className="input-wrapper">
+            <input
+              className="input-bar"
+              placeholder="Ask something from Chatbot"
+              onChange={saveInputText}
+              onKeyDown={handleKeyDown}
+              type="text"
+              size="30"
+              value={inputText}
+            />
+
+            <button
+              className="send-btn"
+              onClick={sendMessage}
+              disabled={isLoading}
+            >
+              <img src="images/send-icon.png" />
+            </button>
+          </div>
+        );
+      }
+
+      function ChatMessage({ message, sender }) {
+        return (
+          <div className={`message-row ${sender}`}>
+            {sender === "bot" && (
+              <img src="images/bot.png" height="50" width="50" />
+            )}
+            <text>{message}</text>
+            {sender === "user" && (
+              <img src="images/default-profile.webp" height="50" width="50" />
+            )}
+          </div>
+        );
+      }
+
+      function ChatMessages({ chatMessages, isLoading }) {
+        React.useEffect(() => {
+          window.scrollTo({
+            top: document.documentElement.scrollHeight,
+            behavior: "smooth",
+          });
+        }, [chatMessages, isLoading]);
+
+        return (
+          <div className="chat-messages">
+            {chatMessages.map((chatMessage) => {
+              return (
+                <ChatMessage
+                  message={chatMessage.message}
+                  sender={chatMessage.sender}
+                  key={chatMessage.id}
+                />
+              );
+            })}
+            {isLoading && (
+              <div
+                className="chat-loading"
+                role="status"
+                aria-label="Bot is typing"
+              >
+                <div className="chat-loader" />
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      function App() {
+        const [chatMessages, setChatMessages] = React.useState([]);
+        const [isLoading, setIsLoading] = React.useState(false);
+
+        // const [chatMessages, setChatMessages] = array;
+
+        // const chatMessages = array[0];
+        // const setChatMessages = array[1];
+
+        return (
+          <>
+            <ChatInput
+              chatMessages={chatMessages}
+              setChatMessages={setChatMessages}
+              isLoading={isLoading}
+              setIsLoading={setIsLoading}
+            />
+            <ChatMessages chatMessages={chatMessages} isLoading={isLoading} />
+          </>
+        );
+      }
+
+      root.render(<App />);
+    </script>
+  </body>
+</html>
